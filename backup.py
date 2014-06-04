@@ -19,6 +19,8 @@ class MySQLDBBackup(object):
 
         self._config = 'config.cfg'
         self._destination = argument.destination
+        self._backup_date = datetime.now().strftime('%d%m%Y')
+
 
     def __check_config__(self):
         """ Check that config file exists """
@@ -27,7 +29,7 @@ class MySQLDBBackup(object):
             with open(self._config) as f:
                 pass
         except IOError as e:
-            print "Unable to open file", e
+            print 'Unable to open file', e
             exit(1)
 
     def __dblist__(self):
@@ -40,7 +42,7 @@ class MySQLDBBackup(object):
             p = subprocess.Popen(mysql, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             stdout, stderr = p.communicate()
             if p.returncode > 0:
-                print "MySQL Error:"
+                print 'MySQL Error:'
                 print stderr
                 exit(1)
             dblist = stdout.strip().split('\n')
@@ -50,24 +52,42 @@ class MySQLDBBackup(object):
                 except ValueError:
                     continue
             if len(dblist) == 1:
-                print "No user databases found"
+                print 'No user databases found'
             return dblist
         except:
-            print "Error occurred"
+            print 'Error occurred'
 
-    def __backup__(self):
+    def __backup__(self, destination):
         """ Backup """
 
         for db in self.__dblist__():
-            print db
-            return db
+            backup_file = db+'_'+self._backup_date+'.sql'
+            backup_dump = open(os.path.join(destination,backup_file), 'w')
+            if db == 'mysql':
+                backup_cmd = ['mysqldump', '--defaults-extra-file='+self._config, '--events', db]
+            else:
+                backup_cmd = ['mysqldump', '--defaults-extra-file='+self._config,  db]
+            p = subprocess.Popen(backup_cmd, stdout=backup_dump)
+            return_code = p.wait()
+            backup_dump.close()
+            if return_code > 0:
+                print 'Error: There was an error backing up', db
+            self.__compress__(destination,backup_file)
+
+    def __compress__(self, destination, backup_file):
+        """ Compress """
+
+        tar = tarfile.open(os.path.join(self._destination, backup_file)+'.tar.gz', 'w:gz')
+        tar.add(os.path.join(destination, backup_file), arcname=backup_file)
+        tar.close()
+        os.remove(os.path.join(destination, backup_file))
 
     def __main__(self):
         """ Main """
 
         self.__check_config__()
         self.__dblist__()
-        self.__backup__()
+        self.__backup__(self._destination)
 
 
 if __name__ == '__main__':
