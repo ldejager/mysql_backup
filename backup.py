@@ -3,9 +3,7 @@
 # MySQL Database Backup
 
 import argparse
-import ConfigParser
 import subprocess
-import sys
 import os
 import tarfile
 from datetime import datetime
