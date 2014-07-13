@@ -15,7 +15,7 @@ class MySQLDBBackup(object):
     def __init__(self):
         """ Initializing """
 
-        self._config = 'config.cfg'
+        self._config = os.path.dirname(os.path.abspath(__file__)) + '/config.cfg'
         self._destination = argument.destination
         self._backup_date = datetime.now().strftime('%d%m%Y')
 
